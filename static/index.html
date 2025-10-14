@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Translator Offline</title>
+    <style>
+        body {
+            font-family: Arial;
+            padding: 20px;
+        }
+        
+        textarea {
+            width: 400px;
+            height: 100px;
+        }
+        
+        .word-box {
+            margin-bottom: 10px;
+        }
+        
+        .english {
+            font-weight: bold;
+        }
+        
+        .phonetic {
+            color: blue;
+            margin-left: 5px;
+        }
+        
+        .vietnamese {
+            color: green;
+            margin-left: 10px;
+        }
+        
+        #inputText {
+            width: 100%;
+            height: 80px;
+            font-size: 16px;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+            margin-bottom: 20px;
+        }
+        
+        .output-container {
+            display: flex;
+            flex-wrap: wrap;
+            /* Cho phép xuống dòng nếu quá dài */
+            gap: 15px;
+            /* Khoảng cách giữa các từ */
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            min-height: 50px;
+            background-color: #f9f9f9;
+        }
+        
+        .word-box {
+            display: flex;
+            flex-direction: column;
+            /* Bạn có thể đổi sang row nếu muốn */
+            align-items: center;
+            padding: 8px 12px;
+            border-radius: 6px;
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            font-size: 14px;
+        }
+        
+        .word-box .english {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .word-box .phonetic {
+            color: #1a73e8;
+            font-style: italic;
+            margin-left: 2px;
+        }
+        
+        .word-box .vietnamese {
+            color: #0f9d58;
+            margin-left: 2px;
+        }
+        
+        @media screen and (max-width: 600px) {
+            #inputText {
+                height: 60px;
+                font-size: 14px;
+            }
+            .output-container {
+                font-size: 12px;
+                gap: 8px;
+            }
+            .word-box {
+                padding: 5px 8px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Translator Cua Anh Em</h1>
+    <textarea id="inputText" placeholder="Nhập tiếng Anh..."></textarea>
+    <h2>Kết quả:</h2>
+    <div id="outputText" class="output-container"></div>
+
+    <script>
+        const input = document.getElementById("inputText");
+        const output = document.getElementById("outputText");
+
+        let timeout = null;
+
+        input.addEventListener("input", () => {
+            clearTimeout(timeout);
+            timeout = setTimeout(async() => {
+                const text = input.value;
+                const response = await fetch("/translate", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        text
+                    })
+                });
+                const data = await response.json();
+
+                // Xóa kết quả cũ
+                output.innerHTML = "";
+
+                // Chia từng từ bằng | (backend trả ra)
+                const items = data.result.split(" | ");
+                items.forEach(item => {
+                    const div = document.createElement("div");
+                    div.className = "word-box";
+
+                    // Phân tách thành từ, phiên âm, nghĩa
+                    const match = item.match(/^(.+?) \[(.+?)\] → (.+)$/);
+                    if (match) {
+                        const eng = document.createElement("span");
+                        eng.className = "english";
+                        eng.textContent = match[1];
+
+                        const phon = document.createElement("span");
+                        phon.className = "phonetic";
+                        phon.textContent = `[${match[2]}]`;
+
+                        const vn = document.createElement("span");
+                        vn.className = "vietnamese";
+                        vn.textContent = `→ ${match[3]}`;
+
+                        div.appendChild(eng);
+                        div.appendChild(phon);
+                        div.appendChild(vn);
+                    } else {
+                        div.textContent = item; // từ không có trong dictionary
+                    }
+
+                    output.appendChild(div);
+                });
+            }, 300); // debounce 300ms
+        });
+    </script>
+</body>
+
+</html>
