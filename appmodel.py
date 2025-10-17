@@ -1,6 +1,5 @@
 from flask import Flask, request, jsonify, send_from_directory
 import csv
-from transformers import MarianMTModel, MarianTokenizer
 
 # --- Khởi tạo Flask ---
 app = Flask(__name__, static_folder='static')
@@ -16,17 +15,25 @@ with open("dictionary.csv", newline='', encoding="utf-8") as f:
             "vietnamese": row["vietnamese"].strip(),
         }
 
-# --- Load model dịch Anh-Việt ---
+# --- Lazy load model (chỉ tải khi cần) ---
+model = None
+tokenizer = None
 model_name = "Helsinki-NLP/opus-mt-en-vi"
-tokenizer = MarianTokenizer.from_pretrained(model_name)
-model = MarianMTModel.from_pretrained(model_name).to("cpu")
+
+def load_model():
+    """Chỉ tải model khi cần dùng để tiết kiệm RAM."""
+    global model, tokenizer
+    if model is None or tokenizer is None:
+        print("🔄 Đang tải model lần đầu (sẽ hơi lâu)...", flush=True)
+        from transformers import MarianMTModel, MarianTokenizer
+        tokenizer = MarianTokenizer.from_pretrained(model_name)
+        model = MarianMTModel.from_pretrained(model_name).to("cpu")
+        print("✅ Model đã sẵn sàng!", flush=True)
 
 def translate_en_to_vi(text):
     """Dịch bằng model Anh → Việt"""
     inputs = tokenizer(text, return_tensors="pt", max_length=128, truncation=True)
-    outputs = model.generate(
-        **inputs, max_length=128, num_beams=5, no_repeat_ngram_size=2
-    )
+    outputs = model.generate(**inputs, max_length=128, num_beams=5, no_repeat_ngram_size=2)
     return tokenizer.decode(outputs[0], skip_special_tokens=True)
 
 # --- Route trang chủ ---
@@ -53,7 +60,8 @@ def translate():
         else:
             result = "Không tìm thấy trong từ điển."
     else:
-        # Nếu từ 2 từ trở lên -> dùng model
+        # Nếu từ 2 từ trở lên -> mới tải model (nếu chưa tải)
+        load_model()
         translation = translate_en_to_vi(text)
         result = translation
 
