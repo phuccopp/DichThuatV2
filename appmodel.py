@@ -10,10 +10,10 @@ dictionary = {}
 with open("dictionary.csv", newline='', encoding="utf-8") as f:
     reader = csv.DictReader(f)
     for row in reader:
-        key = row['english'].strip().lower()
+        key = row["english"].strip().lower()
         dictionary[key] = {
-            'phonetic': row['phonetic'].strip(),
-            'vietnamese': row['vietnamese'].strip()
+            "phonetic": row["phonetic"].strip(),
+            "vietnamese": row["vietnamese"].strip(),
         }
 
 # --- Load model dịch Anh-Việt ---
@@ -22,28 +22,30 @@ tokenizer = MarianTokenizer.from_pretrained(model_name)
 model = MarianMTModel.from_pretrained(model_name).to("cpu")
 
 def translate_en_to_vi(text):
+    """Dịch bằng model Anh → Việt"""
     inputs = tokenizer(text, return_tensors="pt", max_length=128, truncation=True)
-    outputs = model.generate(**inputs, max_length=128, num_beams=5, no_repeat_ngram_size=2)
+    outputs = model.generate(
+        **inputs, max_length=128, num_beams=5, no_repeat_ngram_size=2
+    )
     return tokenizer.decode(outputs[0], skip_special_tokens=True)
 
-# --- Route trả file HTML ---
+# --- Route trang chủ ---
 @app.route("/", methods=["GET"])
 def home():
-    return send_from_directory(app.static_folder, 'index.html')
+    return send_from_directory(app.static_folder, "index.html")
 
-# --- API chính ---
+# --- API dịch ---
 @app.route("/translate", methods=["POST"])
 def translate():
     data = request.json
     text = data.get("text", "").strip().lower()
 
-    # Nếu người dùng không nhập gì
     if not text:
         return jsonify({"result": ""})
 
     words = text.split()
 
-    # Nếu là 1 từ -> tra dictionary
+    # Nếu chỉ 1 từ -> tra dictionary
     if len(words) == 1:
         if text in dictionary:
             item = dictionary[text]
@@ -53,9 +55,12 @@ def translate():
     else:
         # Nếu từ 2 từ trở lên -> dùng model
         translation = translate_en_to_vi(text)
-        result = f"{translation}"
+        result = translation
 
     return jsonify({"result": result})
 
+# --- Chạy app (Render sẽ tự cấp PORT) ---
 if __name__ == "__main__":
-    app.run(debug=True)
+    import os
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
