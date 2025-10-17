@@ -23,7 +23,7 @@ except Exception as e:
 # --- Route trả file HTML ---
 @app.route("/", methods=["GET"])
 def home():
-    return "Server is running"  # Có thể trả index.html nếu có folder static
+    return send_from_directory(app.static_folder, "index.html")  # Có thể trả index.html nếu có folder static
 
 # --- API chính ---
 @app.route("/translate", methods=["POST"])
