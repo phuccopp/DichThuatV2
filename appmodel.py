@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 import csv
-from googletrans import Translator
+from deep_translator import GoogleTranslator
 
 # --- Khởi tạo Flask ---
 app = Flask(__name__, static_folder='static')
@@ -20,13 +20,10 @@ try:
 except Exception as e:
     print(f"⚠️ Không thể tải dictionary.csv: {e}")
 
-# --- Khởi tạo Google Translator ---
-translator = Translator()
-
 # --- Route trả file HTML ---
 @app.route("/", methods=["GET"])
 def home():
-    return "Server is running"  # Bạn có thể trả index.html nếu có static folder
+    return "Server is running"  # Có thể trả index.html nếu có folder static
 
 # --- API chính ---
 @app.route("/translate", methods=["POST"])
@@ -49,8 +46,8 @@ def translate():
     else:
         # 2 từ trở lên → dùng Google Translate
         try:
-            translation = translator.translate(text, src='en', dest='vi')
-            result = translation.text
+            translation = GoogleTranslator(source='en', target='vi').translate(text)
+            result = translation
         except Exception as e:
             result = f"⚠️ Lỗi Google Translate: {e}"
 
